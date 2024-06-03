@@ -3,14 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC IP Leak Detection</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Get IP Addresses</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.15.6/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/vue@2.6.14"></script>
+    <script src="https://unpkg.com/element-ui@2.15.6/lib/index.js"></script>
 </head>
 <body>
-    <h1>WebRTC IP Leak Detection</h1>
-    <button onclick="detectIP()">Detect IP</button>
-    <h2>Your IP Addresses:</h2>
-    <ul id="ip-list"></ul>
-    <script src="script.js"></script>
+    <div id="app">
+        <el-container>
+            <el-header>
+                <h1>Your IP Addresses:</h1>
+            </el-header>
+            <el-main>
+                <el-table :data="ipAddresses" style="width: 100%" border>
+                    <el-table-column prop="type" label="Type" width="180"></el-table-column>
+                    <el-table-column prop="address" label="IP Address"></el-table-column>
+                </el-table>
+            </el-main>
+        </el-container>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    ipAddresses: [
+                        { type: 'XFF or CDN IP Address', address: 'Loading...' },
+                        { type: 'WebRTC Local IP Address', address: 'Loading...' },
+                        { type: 'WebRTC IPv4 Address', address: 'Loading...' },
+                        { type: 'WebRTC IPv6 Address', address: 'Loading...' }
+                    ]
+                };
+            },
+            mounted() {
+                // Fetch XFF or CDN IP address
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', 'get_real_ip.php', true);
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        const jsonResponse = JSON.parse(xhr.responseText);
+                        this.ipAddresses[0].address = jsonResponse.ip;
+                    }
+                };
+                xhr.send();
+
+                // WebRTC IPs
+                const iceServers = [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                ];
+                // getUserIPs function
+                function getUserIPs(callback) {
+                    const myPeerConnection = new RTCPeerConnection({ iceServers });
+                    myPeerConnection.createDataChannel("");
+                    myPeerConnection.createOffer().then(offer => myPeerConnection.setLocalDescription(offer));
+        
+                    myPeerConnection.onicecandidate = function(event) {
+                        if (event.candidate) {
+                            const parts = event.candidate.candidate.split(' ');
+                            const ip = parts[4];
+                            callback(ip);
+                        }
+                    };
+                }
+
+                getUserIPs((ip) => {
+                    // ... (same as before)
+                                const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+            const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}(([0-9a-fA-F]{1,4}:){1,4}|((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+                    if (ipv4Regex.test(ip)) {
+                        this.ipAddresses[2].address = ip;
+                    } else if (ipv6Regex.test(ip)) {
+                        this.ipAddresses[3].address = ip;
+                    } else {
+                        this.ipAddresses[1].address = ip;
+                    }
+                });
+            }
+        });
+    </script>
 </body>
-</html>​​
+</html>
